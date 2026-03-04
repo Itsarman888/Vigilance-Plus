@@ -1,0 +1,53 @@
+#include <iostream>
+#include <string>
+#include <chrono>    // For timing the speed
+#include "json.hpp"  // The library you downloaded
+
+using json = nlohmann::json;
+
+// This function acts like your Fraud Detection logic
+void runVigilanceEngine(std::string jsonData) {
+    // 1. Start the microsecond timer
+    auto start = std::chrono::high_resolution_clock::now();
+
+    try {
+        // 2. Parse the API string into a C++ object
+        auto tx = json::parse(jsonData);
+
+        // 3. Extract data fields sent by the API
+        std::string id = tx["txn_id"];
+        double amount  = tx["amount"];
+        bool isNewLoc  = tx["is_new_location"];
+
+        std::cout << "\n--- Processing Transaction: " << id << " ---" << std::endl;
+
+        // 4. The Rules: High amount + New Location = 🚩
+        if (amount > 3000.0 && isNewLoc) {
+            std::cout << ">> [RESULT] FRAUD DETECTED: BLOCKING CARD" << std::endl;
+        } else {
+            std::cout << ">> [RESULT] TRANSACTION APPROVED" << std::endl;
+        }
+
+    } catch (const std::exception& e) {
+        std::cout << "API Error: Invalid Data Format" << std::endl;
+    }
+
+    // 5. Stop timer and show how fast C++ is
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    std::cout << ">> [TIME] Detection completed in: " << duration.count() << " microseconds." << std::endl;
+}
+
+int main() {
+    // This is what the Plaid/Mastercard API sends to your C++ code
+    std::string apiResponse = R"({
+        "txn_id": "TXN_7741",
+        "amount": 5500.0,
+        "is_new_location": true
+    })";
+
+    // Run the engine
+    runVigilanceEngine(apiResponse);
+
+    return 0;
+}
