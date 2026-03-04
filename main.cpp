@@ -1,54 +1,53 @@
 #include <iostream>
 #include <string>
-#include <vector>
+#include <chrono>    // For timing the speed
+#include "json.hpp"  // The library you downloaded
 
-// ANSI Color Codes for a "Flashy" Terminal Demo
-#define RESET   "\033[0m"
-#define RED     "\033[31m"
-#define GREEN   "\033[32m"
-#define CYAN    "\033[36m"
-#define YELLOW  "\033[33m"
+using json = nlohmann::json;
 
-struct Transaction {
-    std::string id;
-    double amount;
-    bool isInternational;
-    int hour; // 24-hour format
-};
+// This function acts like your Fraud Detection logic
+void runVigilanceEngine(std::string jsonData) {
+    // 1. Start the microsecond timer
+    auto start = std::chrono::high_resolution_clock::now();
 
-class VigilanceEngine {
-public:
-    void analyze(Transaction tx) {
-        double riskScore = 0.0;
-        std::cout << CYAN << "\n[Analyzing Transaction: " << tx.id << "]" << RESET << std::endl;
+    try {
+        // 2. Parse the API string into a C++ object
+        auto tx = json::parse(jsonData);
 
-        // Rule 1: High Amount
-        if (tx.amount > 2000) riskScore += 0.5;
-        // Rule 2: Unusual Hours (Late night)
-        if (tx.hour < 5 || tx.hour > 23) riskScore += 0.3;
-        // Rule 3: Geo-Shift
-        if (tx.isInternational) riskScore += 0.4;
+        // 3. Extract data fields sent by the API
+        std::string id = tx["txn_id"];
+        double amount  = tx["amount"];
+        bool isNewLoc  = tx["is_new_location"];
 
-        std::cout << "Calculating risk using C++ Latency Logic..." << std::endl;
-        
-        if (riskScore >= 0.7) {
-            std::cout << RED << "STATUS: FRAUD DETECTED (Score: " << riskScore * 100 << "%)" << RESET << std::endl;
-            std::cout << RED << "ACTION: TRANSACTION BLOCKED" << RESET << std::endl;
+        std::cout << "\n--- Processing Transaction: " << id << " ---" << std::endl;
+
+        // 4. The Rules: High amount + New Location = 🚩
+        if (amount > 3000.0 && isNewLoc) {
+            std::cout << ">> [RESULT] FRAUD DETECTED: BLOCKING CARD" << std::endl;
         } else {
-            std::cout << GREEN << "STATUS: TRANSACTION SECURE" << RESET << RESET << std::endl;
+            std::cout << ">> [RESULT] TRANSACTION APPROVED" << std::endl;
         }
+
+    } catch (const std::exception& e) {
+        std::cout << "API Error: Invalid Data Format" << std::endl;
     }
-};
+
+    // 5. Stop timer and show how fast C++ is
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    std::cout << ">> [TIME] Detection completed in: " << duration.count() << " microseconds." << std::endl;
+}
 
 int main() {
-    VigilanceEngine engine;
+    // This is what the Plaid/Mastercard API sends to your C++ code
+    std::string apiResponse = R"({
+        "txn_id": "TXN_7741",
+        "amount": 5500.0,
+        "is_new_location": true
+    })";
 
-    // Simulated API Data
-    Transaction t1 = {"TX_9901", 4500.00, true, 3};  // High risk
-    Transaction t2 = {"TX_9902", 45.50, false, 14};  // Low risk
-
-    engine.analyze(t1);
-    engine.analyze(t2);
+    // Run the engine
+    runVigilanceEngine(apiResponse);
 
     return 0;
 }
